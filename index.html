@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survivalcraft World Repacker</title>
+    
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/jszip.min.js"></script>
+
+    <style>
+        /* Custom scrollbar for dark file list */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
+        
+        /* Drag active state for dark mode */
+        .drag-active { border-color: #34d399 !important; background-color: #064e3b !important; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-emerald-900 selection:text-emerald-200">
+
+    <header class="bg-slate-800/90 backdrop-blur-md shadow-sm border-b border-slate-700 sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold tracking-tight text-slate-100">Survivalcraft World Repacker</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        
+        <!-- Introduction Text -->
+        <div class="text-sm text-emerald-200 bg-emerald-950/60 border border-emerald-800/60 p-4 rounded-xl flex items-start gap-2 shadow-inner">
+            <p>Creates strict, .NET-compliant archives using <strong>DEFLATE (level 6)</strong> without extra Unix fields. Ideal for standard `.zip` or game formats like `.scworld`.</p>
+        </div>
+
+        <section>
+            <div id="dropzone" class="border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center bg-slate-800/80 transition-all duration-200 hover:bg-slate-800 hover:border-slate-600 cursor-pointer flex flex-col items-center justify-center min-h-[160px]">
+                <h2 class="text-base font-semibold text-slate-200 mb-1">Tap or drag files here</h2>
+                <p class="text-sm text-slate-400 mb-4">Select multiple files or folders</p>
+                
+                <div class="flex gap-3 mt-2">
+                    <!-- Standard File Input -->
+                    <button type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 px-4 rounded-lg shadow-sm transition-colors relative overflow-hidden">
+                        Add Files
+                        <input type="file" id="fileInput" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    </button>
+                    <!-- Directory Input (Desktop/Android mainly) -->
+                    <button type="button" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium py-2 px-4 rounded-lg shadow-sm transition-colors relative overflow-hidden hidden sm:block">
+                        Add Folder
+                        <input type="file" id="folderInput" webkitdirectory directory multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-slate-800 rounded-2xl shadow-sm border border-slate-700 overflow-hidden flex flex-col" style="max-height: 350px;">
+            <div class="px-4 py-3 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                <h3 class="text-sm font-semibold text-slate-300">Staged Files (<span id="fileCount">0</span>)</h3>
+                <button id="clearAllBtn" class="text-xs text-red-400 font-medium hover:text-red-300 hidden transition-colors">Clear All</button>
+            </div>
+            <div id="emptyState" class="p-8 text-center text-slate-500 text-sm">
+                No files added yet.
+            </div>
+            <ul id="fileList" class="overflow-y-auto custom-scrollbar divide-y divide-slate-700/60 hidden">
+                <!-- File items injected via JS -->
+            </ul>
+        </section>
+
+        <section class="bg-slate-800 rounded-2xl shadow-sm border border-slate-700 p-5 flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-grow flex flex-col gap-1.5">
+                    <label for="filenameInput" class="text-sm font-semibold text-slate-300">Output Filename</label>
+                    <div class="flex">
+                        <input type="text" id="filenameInput" value="Archive" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-l-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none placeholder-slate-500" placeholder="Enter name">
+                        <select id="extensionSelect" class="bg-slate-700 border border-l-0 border-slate-600 text-slate-200 text-sm rounded-r-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none font-medium cursor-pointer">
+                            <option value=".zip">.zip</option>
+                            <option value=".scworld">.scworld</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <button id="generateBtn" disabled class="w-full bg-emerald-600 disabled:bg-slate-700/80 disabled:text-slate-500 disabled:cursor-not-allowed hover:bg-emerald-500 text-white font-medium rounded-lg text-base px-5 py-3.5 text-center flex justify-center items-center gap-2 transition-colors shadow-sm">
+                <span>Generate Clean Archive</span>
+            </button>
+
+            <!-- Progress Bar (Hidden by default) -->
+            <div id="progressContainer" class="hidden flex-col gap-2 mt-2">
+                <div class="flex justify-between text-xs font-medium text-slate-400">
+                    <span id="progressText">Compressing...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                    <div id="progressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-150" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Download Button (Hidden by default) -->
+            <a id="downloadBtn" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg text-base px-5 py-3.5 text-center flex justify-center items-center gap-2 transition-colors shadow-sm mt-2">
+                <span>Download <span id="downloadName" class="font-bold"></span></span>
+            </a>
+        </section>
+
+    </main>
+
+    <footer class="mt-auto py-6 text-center text-xs text-slate-500">
+        <p>Processed entirely in your browser. Files never leave your device.</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const fileListEl = document.getElementById('fileList');
+        const fileCountEl = document.getElementById('fileCount');
+        const emptyStateEl = document.getElementById('emptyState');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        
+        const filenameInput = document.getElementById('filenameInput');
+        const extensionSelect = document.getElementById('extensionSelect');
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadNameSpan = document.getElementById('downloadName');
+
+        // State Array to hold File objects
+        let stagedFiles = [];
+        let objectUrlToRevoke = null;
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight dropzone on drag over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-active'), false);
+        });
+
+        // Handle dropped files
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            handleFiles(dt.files);
+        });
+
+        // Handle Input file selection
+        fileInput.addEventListener('change', function() { handleFiles(this.files); this.value = null; });
+        folderInput.addEventListener('change', function() { handleFiles(this.files); this.value = null; });
+
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            
+            Array.from(files).forEach(file => {
+                let path = file.webkitRelativePath || file.name;
+                
+                if (!stagedFiles.some(f => f.path === path)) {
+                    stagedFiles.push({ file: file, path: path, size: file.size });
+                }
+            });
+            
+            updateUI();
+        }
+
+        function formatBytes(bytes, decimals = 1) {
+            if (!+bytes) return '0 B';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function removeFile(index) {
+            stagedFiles.splice(index, 1);
+            updateUI();
+        }
+
+        clearAllBtn.addEventListener('click', () => {
+            stagedFiles = [];
+            updateUI();
+        });
+
+        function updateUI() {
+            downloadBtn.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+
+            fileCountEl.textContent = stagedFiles.length;
+            
+            if (stagedFiles.length === 0) {
+                emptyStateEl.classList.remove('hidden');
+                fileListEl.classList.add('hidden');
+                clearAllBtn.classList.add('hidden');
+                generateBtn.disabled = true;
+                fileListEl.innerHTML = '';
+                return;
+            }
+
+            emptyStateEl.classList.add('hidden');
+            fileListEl.classList.remove('hidden');
+            clearAllBtn.classList.remove('hidden');
+            generateBtn.disabled = false;
+
+            fileListEl.innerHTML = stagedFiles.map((sf, index) => `
+                <li class="flex justify-between items-center p-3 hover:bg-slate-700/40 transition-colors">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="flex flex-col truncate">
+                            <span class="text-sm font-medium text-slate-200 truncate" title="${sf.path}">${sf.path}</span>
+                            <span class="text-xs text-slate-400">${formatBytes(sf.size)}</span>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-slate-400 hover:text-red-400 p-2 rounded-full hover:bg-red-950/40 transition-colors flex-shrink-0" title="Remove file">
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            if (stagedFiles.length === 0) return;
+
+            generateBtn.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            downloadBtn.classList.add('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            
+            if (objectUrlToRevoke) {
+                URL.revokeObjectURL(objectUrlToRevoke);
+                objectUrlToRevoke = null;
+            }
+
+            try {
+                const zip = new JSZip();
+
+                stagedFiles.forEach(sf => {
+                    const safePath = sf.path.replace(/^\/+/, '');
+                    zip.file(safePath, sf.file);
+                });
+
+                // Generate ZIP with strict settings for .NET/Survivalcraft compatibility
+                const content = await zip.generateAsync({
+                    type: "blob",
+                    compression: "DEFLATE",
+                    compressionOptions: {
+                        level: 6 // Match .NET standard CompressionLevel.Optimal
+                    },
+                    platform: "DOS" // Strips Unix permissions & extra fields
+                }, function updateCallback(metadata) {
+                    const percent = metadata.percent.toFixed(0);
+                    progressBar.style.width = `${percent}%`;
+                    progressPercent.textContent = `${percent}%`;
+                });
+
+                const finalFilename = (filenameInput.value.trim() || 'Archive') + extensionSelect.value;
+                const url = URL.createObjectURL(content);
+                objectUrlToRevoke = url;
+
+                progressContainer.classList.add('hidden');
+                generateBtn.classList.remove('hidden');
+                downloadBtn.classList.remove('hidden');
+                downloadBtn.href = url;
+                downloadBtn.download = finalFilename;
+                downloadNameSpan.textContent = finalFilename;
+
+            } catch (error) {
+                console.error("Compression error:", error);
+                alert("An error occurred during compression. See console for details.");
+                progressContainer.classList.add('hidden');
+                generateBtn.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
