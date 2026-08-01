@@ -31,11 +31,6 @@
 
     <main class="flex-grow w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         
-        <!-- Introduction Text -->
-        <div class="text-sm text-emerald-200 bg-emerald-950/60 border border-emerald-800/60 p-4 rounded-xl flex items-start gap-2 shadow-inner">
-            <p>Creates strict, .NET-compliant archives using <strong>DEFLATE (level 6)</strong> without extra Unix fields. Ideal for standard `.zip` or game formats like `.scworld`.</p>
-        </div>
-
         <section>
             <div id="dropzone" class="border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center bg-slate-800/80 transition-all duration-200 hover:bg-slate-800 hover:border-slate-600 cursor-pointer flex flex-col items-center justify-center min-h-[160px]">
                 <h2 class="text-base font-semibold text-slate-200 mb-1">Tap or drag files here</h2>
@@ -72,12 +67,12 @@
         <section class="bg-slate-800 rounded-2xl shadow-sm border border-slate-700 p-5 flex flex-col gap-4">
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-grow flex flex-col gap-1.5">
-                    <label for="filenameInput" class="text-sm font-semibold text-slate-300">Output Filename</label>
+                    <label for="filenameInput" class="text-sm font-semibold text-slate-300">Output Name</label>
                     <div class="flex">
-                        <input type="text" id="filenameInput" value="Archive" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-l-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none placeholder-slate-500" placeholder="Enter name">
+                        <input type="text" id="filenameInput" value="My Survivalcraft Repacked World" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-l-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none placeholder-slate-500" placeholder="Enter name">
                         <select id="extensionSelect" class="bg-slate-700 border border-l-0 border-slate-600 text-slate-200 text-sm rounded-r-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none font-medium cursor-pointer">
-                            <option value=".zip">.zip</option>
                             <option value=".scworld">.scworld</option>
+                            <option value=".zip">.zip</option>
                         </select>
                     </div>
                 </div>
@@ -85,7 +80,7 @@
 
             <!-- Action Button -->
             <button id="generateBtn" disabled class="w-full bg-emerald-600 disabled:bg-slate-700/80 disabled:text-slate-500 disabled:cursor-not-allowed hover:bg-emerald-500 text-white font-medium rounded-lg text-base px-5 py-3.5 text-center flex justify-center items-center gap-2 transition-colors shadow-sm">
-                <span>Generate Clean Archive</span>
+                <span>Create Archive</span>
             </button>
 
             <!-- Progress Bar (Hidden by default) -->
@@ -104,6 +99,11 @@
                 <span>Download <span id="downloadName" class="font-bold"></span></span>
             </a>
         </section>
+
+        <div class="text-sm text-emerald-200 bg-emerald-950/60 border border-emerald-800/60 p-4 rounded-xl flex flex-col gap-2 shadow-inner">
+            <p>Compress survivalcraft files (Regions, Project.bak and Project.xml) into .scworld file.</p>
+	    <p>Basically an archiver tool but it actually works with .NET zip reader that Survivalcraft uses. It compress using standard zip deflate.</p>
+        </div>
 
     </main>
 
@@ -269,7 +269,7 @@
                     progressPercent.textContent = `${percent}%`;
                 });
 
-                const finalFilename = (filenameInput.value.trim() || 'Archive') + extensionSelect.value;
+                const finalFilename = (filenameInput.value.trim() || 'My Survivalcraft Repacked World') + extensionSelect.value;
                 const url = URL.createObjectURL(content);
                 objectUrlToRevoke = url;
 
